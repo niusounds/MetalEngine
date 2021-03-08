@@ -9,22 +9,67 @@ Java_com_niusounds_oboetest_MainActivity_stringFromJNI(JNIEnv *env, jobject /* t
     return env->NewStringUTF(hello.c_str());
 }
 
-class MyCallback : public oboe::AudioStreamDataCallback {
+class AudioEngine : public oboe::AudioStreamDataCallback {
 public:
+    explicit AudioEngine(int bufferSize) {
+        recordBuffer = new float[bufferSize];
+    }
+
+    ~AudioEngine() override {
+        delete recordBuffer;
+    }
+
     oboe::DataCallbackResult
     onAudioReady(oboe::AudioStream *audioStream, void *audioData, int32_t numFrames) override {
-//        auto *outputData = static_cast<float *>(audioData);
-        auto readSize = inStream->read(audioData, numFrames, 0);
+        // recordBufferにマイクから読み込み
+        auto result = inStream->read(recordBuffer, numFrames, 0);
+        if (result == oboe::Result::OK) {
+            int readSize = result.value();
 
-        return oboe::DataCallbackResult::Continue;
+            // replace the missing data with silence
+            if (readSize != numFrames) {
+                memset(static_cast<float *>(recordBuffer) +
+                       readSize * inStream->getBytesPerSample(), 0,
+                       (numFrames - readSize) * inStream->getBytesPerFrame());
+            }
+
+            // TODO audioDataに出力データを詰める
+            auto *output = (float *) audioData;
+            int numChannels = outStream->getChannelCount();
+
+            // Test: Noise
+//            for (int frameIndex = 0; frameIndex < numFrames; frameIndex++) {
+//                for (int channelIndex = 0; channelIndex < numChannels; channelIndex++) {
+//                    auto noise = (float) (drand48() - 0.5);
+//                    *output++ = noise;
+//                }
+//            }
+            // Test: Mic Input
+            auto *input = recordBuffer;
+            for (int frameIndex = 0; frameIndex < numFrames; frameIndex++) {
+                for (int channelIndex = 0; channelIndex < numChannels; channelIndex++) {
+                    *output++ = *input++;
+                }
+            }
+
+            // TODO AEC
+
+            return oboe::DataCallbackResult::Continue;
+        } else {
+            // Read Error!
+            return oboe::DataCallbackResult::Stop;
+        }
+
     }
 
 public:
     oboe::ManagedStream inStream;
     oboe::ManagedStream outStream;
+private:
+    float *recordBuffer;
 };
 
-MyCallback *myCallback = nullptr;
+AudioEngine *myCallback = nullptr;
 
 void cleanup() {
     if (myCallback != nullptr) {
@@ -34,16 +79,17 @@ void cleanup() {
 }
 
 void startAudio() {
+    int frameSize = 960 * 2 /*ch*/;
     oboe::AudioStreamBuilder inBuilder;
     inBuilder.setDirection(oboe::Direction::Input)
             ->setSampleRate(48000)
-            ->setBufferCapacityInFrames(960 * 2/*ch*/* 4 /* extra buffer*/)
+            ->setBufferCapacityInFrames(frameSize * 4 /* extra buffer*/)
             ->setPerformanceMode(oboe::PerformanceMode::LowLatency)
             ->setSharingMode(oboe::SharingMode::Shared)
             ->setFormat(oboe::AudioFormat::Float)
             ->setChannelCount(oboe::Stereo);
 
-    myCallback = new MyCallback();
+    myCallback = new AudioEngine(frameSize);
     oboe::Result inResult = inBuilder.openManagedStream(myCallback->inStream);
     if (inResult != oboe::Result::OK) {
         delete myCallback;
@@ -54,7 +100,7 @@ void startAudio() {
     oboe::AudioStreamBuilder outBuilder;
     outBuilder.setDirection(oboe::Direction::Output)
             ->setSampleRate(48000)
-            ->setFramesPerCallback(960 * 2/*ch*/)
+            ->setFramesPerCallback(frameSize)
             ->setPerformanceMode(oboe::PerformanceMode::LowLatency)
             ->setSharingMode(oboe::SharingMode::Shared)
             ->setFormat(oboe::AudioFormat::Float)
