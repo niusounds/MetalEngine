@@ -4,20 +4,16 @@
 #include <android/log.h>
 #include "readerwriterqueue.h"
 
-extern "C" JNIEXPORT jstring JNICALL
-Java_com_niusounds_oboetest_MainActivity_stringFromJNI(JNIEnv *env, jobject /* this */) {
-    std::string hello = "Hello from C++";
-    return env->NewStringUTF(hello.c_str());
-}
+#define LOGE(msg) __android_log_print(ANDROID_LOG_ERROR, "MetalEngine", msg);
 
 class EnqueueInfo {
 public:
     int startPos;
 };
 
-class AudioEngine : public oboe::AudioStreamDataCallback {
+class MetalEngine : public oboe::AudioStreamDataCallback {
 public:
-    explicit AudioEngine(int frameSize, int writeBufferCount) {
+    explicit MetalEngine(int frameSize, int writeBufferCount) {
         this->frameSize = frameSize;
         audioWriteBufferSize = frameSize * writeBufferCount;
         recordBuffer = new float[frameSize];
@@ -25,13 +21,13 @@ public:
         queue = moodycamel::ReaderWriterQueue<EnqueueInfo>(writeBufferCount);
     }
 
-    ~AudioEngine() override {
+    ~MetalEngine() override {
         delete recordBuffer;
         delete audioWriteBuffer;
     }
 
     // must contains frameSize audio data.
-    bool enqueue(const float *audioData) {
+    void enqueue(const float *audioData) {
         int startPos = audioWriteBufferPos;
         int index = startPos;
         for (int i = 0; i < frameSize; ++i) {
@@ -45,7 +41,7 @@ public:
 
         auto info = EnqueueInfo();
         info.startPos = startPos;
-        return queue.try_enqueue(info);
+        while (!queue.try_enqueue(info));
 
 //        if (endPos > startPos) {
 //            memcpy(audioWriteBuffer + startPos * sizeof(float), audioData, numFrames);
@@ -129,68 +125,69 @@ private:
     moodycamel::ReaderWriterQueue<EnqueueInfo> queue;
 };
 
-AudioEngine *myCallback = nullptr;
-
-void cleanup() {
-    if (myCallback != nullptr) {
-        delete myCallback;
-        myCallback = nullptr;
-    }
-}
-
-void startAudio(int frameSize, int bufferCount) {
+extern "C" JNIEXPORT jlong JNICALL
+Java_com_niusounds_metalengine_MetalEngine_nativeInit(JNIEnv *env, jobject /* this */,
+                                                      jint sampleRate, jint frameSize,
+                                                      jint channels, jint bufferCount,
+                                                      jboolean lowLatency) {
+    auto performanceMode = lowLatency ? oboe::PerformanceMode::LowLatency
+                                      : oboe::PerformanceMode::PowerSaving;
     oboe::AudioStreamBuilder inBuilder;
     inBuilder.setDirection(oboe::Direction::Input)
-            ->setSampleRate(48000)
+            ->setSampleRate(sampleRate)
             ->setBufferCapacityInFrames(frameSize * 4 /* extra buffer*/)
-            ->setPerformanceMode(oboe::PerformanceMode::LowLatency)
+            ->setPerformanceMode(performanceMode)
             ->setSharingMode(oboe::SharingMode::Shared)
             ->setFormat(oboe::AudioFormat::Float)
-            ->setChannelCount(oboe::Mono);
+            ->setChannelCount(channels);
 
-    myCallback = new AudioEngine(frameSize, bufferCount);
-    oboe::Result inResult = inBuilder.openManagedStream(myCallback->inStream);
+    auto engine = new MetalEngine(frameSize, bufferCount);
+    oboe::Result inResult = inBuilder.openManagedStream(engine->inStream);
     if (inResult != oboe::Result::OK) {
-        delete myCallback;
-        __android_log_print(ANDROID_LOG_ERROR, "OboeTest", "open inStream failed!");
-        return;
+        delete engine;
+        LOGE("open inStream failed!");
+        return 0;
     }
 
     oboe::AudioStreamBuilder outBuilder;
     outBuilder.setDirection(oboe::Direction::Output)
-            ->setSampleRate(48000)
+            ->setSampleRate(sampleRate)
             ->setFramesPerCallback(frameSize)
-            ->setPerformanceMode(oboe::PerformanceMode::LowLatency)
+            ->setPerformanceMode(performanceMode)
             ->setSharingMode(oboe::SharingMode::Shared)
             ->setFormat(oboe::AudioFormat::Float)
-            ->setChannelCount(oboe::Mono)
-            ->setDataCallback(myCallback);
+            ->setChannelCount(channels)
+            ->setDataCallback(engine);
 
-    oboe::Result outResult = outBuilder.openManagedStream(myCallback->outStream);
+    oboe::Result outResult = outBuilder.openManagedStream(engine->outStream);
     if (outResult != oboe::Result::OK) {
-        delete myCallback;
-        __android_log_print(ANDROID_LOG_ERROR, "OboeTest", "open outStream failed!");
-        return;
+        delete engine;
+        LOGE("open outStream failed!");
+        return 0;
     }
 
-    myCallback->inStream->requestStart();
-    myCallback->outStream->requestStart();
+    return reinterpret_cast<jlong>(engine);
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_niusounds_oboetest_MainActivity_nativeAudio(JNIEnv *env, jobject /* this */,
-                                                     jint frameSize, jint bufferCount) {
-    startAudio(frameSize, bufferCount);
+Java_com_niusounds_metalengine_MetalEngine_start(JNIEnv *env, jobject /* this */, jlong nativePtr) {
+    auto engine = reinterpret_cast<MetalEngine *>(nativePtr);
+    engine->outStream->requestStart();
+    engine->inStream->requestStart();
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_niusounds_oboetest_MainActivity_release(JNIEnv *env, jobject /* this */) {
-    cleanup();
+Java_com_niusounds_metalengine_MetalEngine_release(JNIEnv *env, jobject /* this */,
+                                                   jlong nativePtr) {
+    auto engine = reinterpret_cast<MetalEngine *>(nativePtr);
+    delete engine;
 }
 
-extern "C" JNIEXPORT jboolean JNICALL
-Java_com_niusounds_oboetest_MainActivity_writeFloats(JNIEnv *env, jobject, jobject buffer) {
+extern "C" JNIEXPORT void JNICALL
+Java_com_niusounds_metalengine_MetalEngine_writeFloats(JNIEnv *env, jobject/*this*/,
+                                                       jlong nativePtr, jobject buffer) {
+    auto engine = reinterpret_cast<MetalEngine *>(nativePtr);
     auto bufferPtr = static_cast<float *>(env->GetDirectBufferAddress(buffer));
-    return myCallback->enqueue(bufferPtr);
+    engine->enqueue(bufferPtr);
 }
 
