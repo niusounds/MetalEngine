@@ -1,6 +1,8 @@
 package com.niusounds.metalengine
 
+import android.os.Process
 import java.nio.ByteBuffer
+import kotlin.concurrent.thread
 
 class MetalEngine(
     val sampleRate: Int,
@@ -10,6 +12,10 @@ class MetalEngine(
     val lowLatency: Boolean = true,
 ) {
     private var nativePtr: Long
+
+    private var running = false
+    private val inBuffer = ByteBuffer.allocateDirect(frameSize * channels * Float.SIZE_BYTES)
+    private var readThread: Thread? = null
 
     init {
         nativePtr = nativeInit(sampleRate, frameSize, channels, bufferCount, lowLatency)
@@ -26,7 +32,25 @@ class MetalEngine(
     /**
      * Start audio processing.
      */
-    fun start() = start(nativePtr)
+    fun start() {
+        if (running) return
+        running = true
+
+        start(nativePtr)
+        startReadThread()
+    }
+
+    private fun startReadThread() {
+        readThread = thread {
+            Process.setThreadPriority(Process.THREAD_PRIORITY_URGENT_AUDIO)
+
+            val audioRecordData = AudioRecordData(sampleRate, frameSize, channels, inBuffer)
+            while (!Thread.interrupted()) {
+                readFloats(nativePtr, inBuffer)
+                // TODO notify audioRecordData
+            }
+        }
+    }
 
     /**
      * Write output audio data.
@@ -46,6 +70,7 @@ class MetalEngine(
     private external fun start(nativePtr: Long)
     private external fun release(nativePtr: Long)
     private external fun writeFloats(nativePtr: Long, buffer: ByteBuffer)
+    private external fun readFloats(nativePtr: Long, buffer: ByteBuffer)
 
     companion object {
         init {

@@ -26,6 +26,12 @@ public:
         delete audioWriteBuffer;
     }
 
+    void read(float *audioData) {
+        externalReadBuffer = audioData;
+        readToExternalBuffer = true;
+        while (readToExternalBuffer); // block
+    }
+
     // must contains frameSize audio data.
     void enqueue(const float *audioData) {
         int startPos = audioWriteBufferPos;
@@ -105,6 +111,12 @@ public:
 
             // TODO AEC
 
+            // read to externalReadBuffer
+            if (readToExternalBuffer) {
+                memcpy(externalReadBuffer, recordBuffer, numFrames * inStream->getBytesPerFrame());
+                readToExternalBuffer = false;
+            }
+
             return oboe::DataCallbackResult::Continue;
         } else {
             // Read Error!
@@ -120,6 +132,10 @@ private:
     int frameSize;
     float *recordBuffer;
     float *audioWriteBuffer;
+
+    std::atomic_bool readToExternalBuffer{};
+    float *externalReadBuffer = nullptr;
+
     int audioWriteBufferPos = 0;
     int audioWriteBufferSize;
     moodycamel::ReaderWriterQueue<EnqueueInfo> queue;
@@ -189,5 +205,13 @@ Java_com_niusounds_metalengine_MetalEngine_writeFloats(JNIEnv *env, jobject/*thi
     auto engine = reinterpret_cast<MetalEngine *>(nativePtr);
     auto bufferPtr = static_cast<float *>(env->GetDirectBufferAddress(buffer));
     engine->enqueue(bufferPtr);
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_niusounds_metalengine_MetalEngine_readFloats(JNIEnv *env, jobject/*this*/,
+                                                      jlong nativePtr, jobject buffer) {
+    auto engine = reinterpret_cast<MetalEngine *>(nativePtr);
+    auto bufferPtr = static_cast<float *>(env->GetDirectBufferAddress(buffer));
+    engine->read(bufferPtr);
 }
 
