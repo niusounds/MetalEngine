@@ -44,5 +44,5 @@ android {
 }
 
 dependencies {
-    implementation 'com.google.oboe:oboe:1.6.1'
+    implementation libs.oboe
 }
