@@ -1,10 +1,9 @@
 package com.niusounds.metalengine
 
-import com.niusounds.metalengine.impl.AudioOutputImpl
+import com.niusounds.metalengine.impl.AudioInputImpl
 import java.nio.ByteBuffer
 
-interface AudioOutput {
-    val bufferCount: Int
+interface AudioInput {
     val frameSize: Int
     val channels: Int
     val sampleRate: Int
@@ -12,21 +11,19 @@ interface AudioOutput {
     fun release()
     fun start()
     fun stop()
-    fun writeFloats(buffer: ByteBuffer)
+    fun readFloats(buffer: ByteBuffer)
 
     companion object {
         fun create(
             sampleRate: Int,
             frameSize: Int,
             channels: Int,
-            bufferCount: Int = sampleRate / frameSize,
             lowLatency: Boolean = true,
-        ): AudioOutput {
-            return AudioOutputImpl(
+        ): AudioInput {
+            return AudioInputImpl(
                 sampleRate = sampleRate,
                 frameSize = frameSize,
                 channels = channels,
-                bufferCount = bufferCount,
                 lowLatency = lowLatency
             )
         }

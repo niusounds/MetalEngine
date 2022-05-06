@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.10.2)
 
 # Build our own native library
-add_library(metalengine SHARED MetalEngine.cpp AudioOutput.cpp)
+add_library(metalengine SHARED MetalEngine.cpp AudioOutput.cpp AudioInput.cpp)
 
 # Find the Oboe package
 find_package(oboe REQUIRED CONFIG)

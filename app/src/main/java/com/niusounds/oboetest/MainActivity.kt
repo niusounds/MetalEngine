@@ -6,6 +6,7 @@ import android.os.Bundle
 import android.view.View
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import com.niusounds.metalengine.AudioInput
 import com.niusounds.metalengine.AudioOutput
 
 class MainActivity : AppCompatActivity() {
@@ -13,6 +14,21 @@ class MainActivity : AppCompatActivity() {
     private val toneGenerator: ToneGenerator by lazy {
         ToneGenerator(
             engine = AudioOutput.create(
+                sampleRate = 48000,
+                frameSize = 1920,
+                channels = 1,
+                bufferCount = 16,
+            )
+        )
+    }
+    private val audioFeedback: AudioFeedback by lazy {
+        AudioFeedback(
+            input = AudioInput.create(
+                sampleRate = 48000,
+                frameSize = 1920,
+                channels = 1,
+            ),
+            output = AudioOutput.create(
                 sampleRate = 48000,
                 frameSize = 1920,
                 channels = 1,
@@ -32,7 +48,14 @@ class MainActivity : AppCompatActivity() {
                 recordPermission
             ) == PackageManager.PERMISSION_GRANTED
         ) {
-            toneGenerator.start()
+            when (view.id) {
+                R.id.toneGenerator -> {
+                    toneGenerator.start()
+                }
+                R.id.feedback -> {
+                    audioFeedback.start()
+                }
+            }
         } else {
             requestPermissions(arrayOf(recordPermission), 1)
         }
@@ -41,27 +64,12 @@ class MainActivity : AppCompatActivity() {
     override fun onStop() {
         super.onStop()
         toneGenerator.stop()
-    }
-
-    override fun onRequestPermissionsResult(
-        requestCode: Int,
-        permissions: Array<out String>,
-        grantResults: IntArray
-    ) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        when (requestCode) {
-            1 -> {
-                permissions.forEachIndexed { index, permission ->
-                    if (permission == this.recordPermission && grantResults[index] == PackageManager.PERMISSION_GRANTED) {
-                        toneGenerator.start()
-                    }
-                }
-            }
-        }
+        audioFeedback.stop()
     }
 
     override fun onDestroy() {
         toneGenerator.release()
+        audioFeedback.release()
         super.onDestroy()
     }
 }
