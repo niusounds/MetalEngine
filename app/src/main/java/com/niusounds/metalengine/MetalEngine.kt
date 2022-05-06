@@ -11,6 +11,9 @@ class MetalEngine(
     val bufferCount: Int = sampleRate / frameSize,
     val lowLatency: Boolean = true,
 ) {
+    /**
+     * Holds native MetalEngine's pointer.
+     */
     private var nativePtr: Long
 
     private var running = false
@@ -38,6 +41,13 @@ class MetalEngine(
 
         start(nativePtr)
         startReadThread()
+    }
+
+    fun stop() {
+        if (!running) return
+        running = false
+
+        stop(nativePtr)
     }
 
     private fun startReadThread() {
@@ -68,6 +78,7 @@ class MetalEngine(
     ): Long
 
     private external fun start(nativePtr: Long)
+    private external fun stop(nativePtr: Long)
     private external fun release(nativePtr: Long)
     private external fun writeFloats(nativePtr: Long, buffer: ByteBuffer)
     private external fun readFloats(nativePtr: Long, buffer: ByteBuffer)

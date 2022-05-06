@@ -193,6 +193,13 @@ Java_com_niusounds_metalengine_MetalEngine_start(JNIEnv *env, jobject /* this */
 }
 
 extern "C" JNIEXPORT void JNICALL
+Java_com_niusounds_metalengine_MetalEngine_stop(JNIEnv *env, jobject /* this */, jlong nativePtr) {
+    auto engine = reinterpret_cast<MetalEngine *>(nativePtr);
+    engine->outStream->requestStop();
+    engine->inStream->requestStop();
+}
+
+extern "C" JNIEXPORT void JNICALL
 Java_com_niusounds_metalengine_MetalEngine_release(JNIEnv *env, jobject /* this */,
                                                    jlong nativePtr) {
     auto engine = reinterpret_cast<MetalEngine *>(nativePtr);
