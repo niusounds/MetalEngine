@@ -1,13 +1,13 @@
 package com.niusounds.oboetest
 
-import com.niusounds.metalengine.MetalEngine
+import com.niusounds.metalengine.AudioOutput
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import kotlin.concurrent.thread
 import kotlin.math.sin
 
 class ToneGenerator(
-    private val engine: MetalEngine,
+    private val engine: AudioOutput,
 ) {
 
     private var thread: Thread? = null

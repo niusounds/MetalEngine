@@ -6,12 +6,19 @@ import android.os.Bundle
 import android.view.View
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
-import com.niusounds.metalengine.MetalEngine
+import com.niusounds.metalengine.AudioOutput
 
 class MainActivity : AppCompatActivity() {
     private val recordPermission = Manifest.permission.RECORD_AUDIO
     private val toneGenerator: ToneGenerator by lazy {
-        ToneGenerator(engine = MetalEngine(48000, 1920, 1, 16))
+        ToneGenerator(
+            engine = AudioOutput.create(
+                sampleRate = 48000,
+                frameSize = 1920,
+                channels = 1,
+                bufferCount = 16,
+            )
+        )
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {

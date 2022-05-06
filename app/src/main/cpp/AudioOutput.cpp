@@ -82,10 +82,10 @@ private:
 };
 
 extern "C" JNIEXPORT jlong JNICALL
-Java_com_niusounds_metalengine_AudioOutput_nativeInit(JNIEnv *env, jobject /* this */,
-                                                      jint sampleRate, jint frameSize,
-                                                      jint channels, jint bufferCount,
-                                                      jboolean lowLatency) {
+Java_com_niusounds_metalengine_impl_AudioOutputImpl_nativeInit(JNIEnv *env, jobject /* this */,
+                                                               jint sampleRate, jint frameSize,
+                                                               jint channels, jint bufferCount,
+                                                               jboolean lowLatency) {
     auto engine = new AudioOutput(frameSize, bufferCount);
 
     auto performanceMode = lowLatency ? oboe::PerformanceMode::LowLatency
@@ -112,27 +112,27 @@ Java_com_niusounds_metalengine_AudioOutput_nativeInit(JNIEnv *env, jobject /* th
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_niusounds_metalengine_AudioOutput_start(JNIEnv *env, jobject /* this */, jlong nativePtr) {
+Java_com_niusounds_metalengine_impl_AudioOutputImpl_start(JNIEnv *env, jobject /* this */, jlong nativePtr) {
     auto engine = reinterpret_cast<AudioOutput *>(nativePtr);
     engine->outStream->requestStart();
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_niusounds_metalengine_AudioOutput_stop(JNIEnv *env, jobject /* this */, jlong nativePtr) {
+Java_com_niusounds_metalengine_impl_AudioOutputImpl_stop(JNIEnv *env, jobject /* this */, jlong nativePtr) {
     auto engine = reinterpret_cast<AudioOutput *>(nativePtr);
     engine->outStream->requestStop();
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_niusounds_metalengine_AudioOutput_release(JNIEnv *env, jobject /* this */,
-                                                   jlong nativePtr) {
+Java_com_niusounds_metalengine_impl_AudioOutputImpl_release(JNIEnv *env, jobject /* this */,
+                                                            jlong nativePtr) {
     auto engine = reinterpret_cast<AudioOutput *>(nativePtr);
     delete engine;
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_niusounds_metalengine_AudioOutput_writeFloats(JNIEnv *env, jobject/*this*/,
-                                                       jlong nativePtr, jobject buffer) {
+Java_com_niusounds_metalengine_impl_AudioOutputImpl_writeFloats(JNIEnv *env, jobject/*this*/,
+                                                                jlong nativePtr, jobject buffer) {
     auto engine = reinterpret_cast<AudioOutput *>(nativePtr);
     auto bufferPtr = static_cast<float *>(env->GetDirectBufferAddress(buffer));
     engine->enqueue(bufferPtr);
