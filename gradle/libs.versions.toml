@@ -2,7 +2,7 @@
 oboe = "1.6.1"
 kotlin = "1.6.10"
 agp = "7.2.2"
-core-ktx = "1.7.0"
+core-ktx = "1.8.0"
 appcompat = "1.5.0"
 material = "1.6.1"
 constraintlayout = "2.1.4"
