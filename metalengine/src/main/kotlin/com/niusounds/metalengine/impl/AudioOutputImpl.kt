@@ -46,6 +46,11 @@ internal class AudioOutputImpl(
         stop(nativePtr)
     }
 
+    override fun write(audioData: FloatArray) {
+        if (!running) return
+        write(nativePtr, audioData)
+    }
+
     /**
      * Write output audio data.
      * [buffer] must contains float pcm and its sample count must be equal to frameSize * channels.
@@ -67,6 +72,7 @@ internal class AudioOutputImpl(
     private external fun start(nativePtr: Long)
     private external fun stop(nativePtr: Long)
     private external fun release(nativePtr: Long)
+    private external fun write(nativePtr: Long, audioData: FloatArray)
     private external fun writeFloats(nativePtr: Long, buffer: ByteBuffer)
 
     companion object {

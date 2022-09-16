@@ -12,6 +12,7 @@ interface AudioOutput {
     fun release()
     fun start()
     fun stop()
+    fun write(audioData: FloatArray)
     fun writeFloats(buffer: ByteBuffer)
 
     companion object {

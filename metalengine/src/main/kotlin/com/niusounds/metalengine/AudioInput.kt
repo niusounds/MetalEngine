@@ -11,6 +11,7 @@ interface AudioInput {
     fun release()
     fun start()
     fun stop()
+    fun read(audioData: FloatArray)
     fun readFloats(buffer: ByteBuffer)
 
     companion object {
