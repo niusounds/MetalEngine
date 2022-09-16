@@ -92,6 +92,15 @@ Java_com_niusounds_metalengine_impl_AudioInputImpl_release(JNIEnv *env, jobject 
 }
 
 extern "C" JNIEXPORT void JNICALL
+Java_com_niusounds_metalengine_impl_AudioInputImpl_read(JNIEnv *env, jobject/*this*/,
+                                                        jlong nativePtr, jfloatArray audioData) {
+    auto input = reinterpret_cast<AudioInput *>(nativePtr);
+    auto audioDataPtr = env->GetFloatArrayElements(audioData, 0);
+    input->read(audioDataPtr);
+    env->ReleaseFloatArrayElements(audioData, audioDataPtr, 0);
+}
+
+extern "C" JNIEXPORT void JNICALL
 Java_com_niusounds_metalengine_impl_AudioInputImpl_readFloats(JNIEnv *env, jobject/*this*/,
                                                               jlong nativePtr, jobject buffer) {
     auto input = reinterpret_cast<AudioInput *>(nativePtr);
