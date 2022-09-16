@@ -2,8 +2,6 @@ package com.niusounds.oboetest
 
 import com.niusounds.metalengine.AudioInput
 import com.niusounds.metalengine.AudioOutput
-import java.nio.ByteBuffer
-import java.nio.ByteOrder
 import kotlin.concurrent.thread
 
 class AudioFeedback(
@@ -25,16 +23,18 @@ class AudioFeedback(
             runCatching {
                 android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_URGENT_AUDIO)
                 val data = Array(output.bufferCount) {
-                    ByteBuffer.allocateDirect(output.frameSize * output.channels * Float.SIZE_BYTES)
-                        .order(ByteOrder.nativeOrder())
+                    FloatArray(output.frameSize * output.channels)
+                    // or ByteBuffer.allocateDirect(output.frameSize * output.channels * Float.SIZE_BYTES).order(ByteOrder.nativeOrder())
                 }
 
                 var index = 0
                 while (!Thread.interrupted()) {
                     val buffer = data[index]
 
-                    input.readFloats(buffer)
-                    output.writeFloats(buffer)
+                    input.read(buffer)
+                    // or input.readFloats(buffer)
+                    output.write(buffer)
+                    // or output.writeFloats(buffer)
 
                     index++
                     if (index >= data.size) {
