@@ -8,6 +8,7 @@ group = "com.github.niusounds"
 version = "0.0.1"
 
 android {
+    namespace = "com.niusounds.metalengine"
     compileSdkVersion 32
 
     defaultConfig {

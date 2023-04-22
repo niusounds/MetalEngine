@@ -4,6 +4,7 @@ plugins {
 }
 
 android {
+    namespace = "com.niusounds.oboetest"
     compileSdkVersion 33
 
     defaultConfig {
