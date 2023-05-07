@@ -3,5 +3,8 @@
   "extends": [
     "config:base"
   ],
+  "reviewers": [
+    "niusounds"
+  ],
   "automerge": true
 }
